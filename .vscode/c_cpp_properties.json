@@ -1,0 +1,36 @@
+{
+    "configurations": [
+        {
+            "name": "GCC",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Users/hemmer/Code/VCV/Rack-SDK/dep/**",
+                "C:/Users/hemmer/Code/VCV/Rack-SDK/dep/include/**",
+                "C:/Users/hemmer/Code/VCV/Rack-SDK/include/**",
+                "C:/msys64/mingw64/include/*",
+                "C:/msys64/mingw64/include/nanovg"
+            ],
+            "defines": ["_DEBUG", "UNICODE", "_UNICODE"],
+            "compilerPath": "C:/msys64/mingw64/bin/g++.exe",
+            "intelliSenseMode": "gcc-x64",
+            "cStandard": "c11",
+            "browse": {
+                "path": [
+                    "${workspaceRoot}",
+                    "C:/Users/hemmer/Code/VCV/Rack-SDK/include",
+                    "C:/Users/hemmer/Code/VCV/Rack-SDK/dep/include",
+                    "C:/Users/hemmer/Code/VCV/Rack-SDK/dep",
+                    "C:\\msys64\\mingw64\\include\\c++\\10.2.0",
+                    "C:\\msys64\\mingw64\\include",
+                    "C:\\msys64\\mingw64\\include\\nanovg",
+                    "C:\\msys64\\mingw64\\x86_64-w64-mingw32\\include",
+                    "C:\\msys64\\mingw64\\include\\c++\\10.2.0\\x86_64-w64-mingw32",
+                    "C:\\msys64\\mingw64\\lib\\gcc\\x86_64-w64-mingw32\\10.2.0\\include"
+                ],
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": ""
+            }
+        }
+    ],
+    "version": 4
+}
