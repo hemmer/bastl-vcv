@@ -41,13 +41,14 @@ struct Kompas : Module {
 		NUM_MODES
 	};
 
-	bool generate[NUM_MODES] = {false, false, false};
+	bool generate[NUM_MODES] = {true, true, true};
 
 	// for processing rising edges (clock / reset)
 	dsp::SchmittTrigger clockTrigger;
 	dsp::SchmittTrigger resetTrigger;
 
 	dsp::PulseGenerator coordinateTrigger[NUM_MODES];
+	dsp::PulseGenerator resetLEDPulse;
 
 	bool patternArray[NUM_MODES][32] = {};
 	int randomArray[NUM_MODES][32] = {};
@@ -57,18 +58,17 @@ struct Kompas : Module {
 	int prob[NUM_MODES] = {0, 0, 0};
 	int prevProb[NUM_MODES] = {0, 0, 0};
 
-	//euclidean parameters (Longitude)
+	// Euclidean parameters (Longitude)
 	int noStepsLongitude;
 
 	int step[NUM_MODES] = {};
 	int stepValue[NUM_MODES];
-	float out[NUM_MODES] = {};
 
 	Kompas() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		configParam(LATITUDE_PARAM, 0.f, 1023.f, 0.f, "Latitude");
-		configParam(ALTITUDE_PARAM, 0.f, 1023.f, 0.f, "Altitude");
-		configParam(LONGITUDE_PARAM, 0.f, 1023.f, 0.f, "Longitude");
+		configParam(LATITUDE_PARAM, 0.f, 1023.f, 0.f, "Latitude", "", 0.f, 1./1023.f);
+		configParam(ALTITUDE_PARAM, 0.f, 1023.f, 0.f, "Altitude", "", 0.f, 1./1023.f);
+		configParam(LONGITUDE_PARAM, 0.f, 1023.f, 0.f, "Longitude", "", 0.f, 1./1023.f);
 	}
 
 	void process(const ProcessArgs& args) override {
@@ -91,10 +91,10 @@ struct Kompas : Module {
 			for (int mode = 0; mode < NUM_MODES; ++mode) {
 				step[mode] = length[mode] - 1;
 			}
+			resetLEDPulse.trigger(0.01f);
 		}
 
 		const bool clockTick = clockTrigger.process(rescale(inputs[CLOCK_INPUT].getVoltage(), 0.1f, 2.f, 0.f, 1.f));
-		lights[CLOCK_LED].setBrightness(rescale(inputs[CLOCK_INPUT].getVoltage(), 0.1f, 2.f, 0.f, 1.f));
 
 		if (clockTick) {
 
@@ -109,9 +109,6 @@ struct Kompas : Module {
 				int rescaledCV = rescale(clamp(modeCV, 0.f, 10.f), 0.f, 10.f, 0.f, 1023.f);
 
 				stepValue[mode] = (rescaledCV > 1011) ? 1 : patternArray[mode][pos[mode]];
-
-				// out[mode] = stepValue[mode] ? 10.f : 0.f;
-
 				prob[mode] = params[mode].getValue() + rescaledCV;
 
 				DEBUG((string::f("mode %d: %d %d %d %d", mode, pos[mode], step[mode], prob[mode], stepValue[mode], patternArray[mode][pos[mode]])).c_str());
@@ -126,16 +123,18 @@ struct Kompas : Module {
 			outputs[mode].setVoltage(stepValue[mode] * clockTrigger.isHigh() * 10.f);
 
 			// output the pattern for the current LED
-			lights[mode].setBrightness(stepValue[mode] * clockTrigger.isHigh());
+			lights[mode].setSmoothBrightness(stepValue[mode] * clockTrigger.isHigh(), args.sampleTime);
 
 			// also indicate if the pattern has recently changed
-			lights[LAT_CHANGED_LED + mode].setBrightness(coordinateTrigger[mode].process(args.sampleTime));
+			lights[LAT_CHANGED_LED + mode].setSmoothBrightness(coordinateTrigger[mode].process(args.sampleTime), args.sampleTime);
 		}
+
+		lights[CLOCK_LED].setBrightness(rescale(inputs[CLOCK_INPUT].getVoltage(), 0.1f, 2.f, 0.f, 1.f));
+		lights[RESET_LED].setSmoothBrightness(resetLEDPulse.process(args.sampleTime), args.sampleTime);
 
 		processLongitude();
 		processLatitude();
 		processAltitude();
-
 	}
 
 	void processLongitude() {
