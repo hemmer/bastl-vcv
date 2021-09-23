@@ -23,14 +23,14 @@ struct Kompas : Module {
 		NUM_OUTPUTS
 	};
 	enum LightIds {
-		LAT_LED,
-		ALT_LED,
-		LON_LED,
-		LAT_CHANGED_LED,
-		ALT_CHANGED_LED,
-		LON_CHANGED_LED,
-		RESET_LED,
-		CLOCK_LED,
+		LAT_LIGHT,
+		ALT_LIGHT,
+		LON_LIGHT,
+		LAT_CHANGED_LIGHT,
+		ALT_CHANGED_LIGHT,
+		LON_CHANGED_LIGHT,
+		RESET_LIGHT,
+		CLOCK_LIGHT,
 		NUM_LIGHTS
 	};
 
@@ -66,9 +66,9 @@ struct Kompas : Module {
 
 	Kompas() {
 		config(NUM_PARAMS, NUM_INPUTS, NUM_OUTPUTS, NUM_LIGHTS);
-		configParam(LATITUDE_PARAM, 0.f, 1023.f, 0.f, "Latitude", "", 0.f, 1./1023.f);
-		configParam(ALTITUDE_PARAM, 0.f, 1023.f, 0.f, "Altitude", "", 0.f, 1./1023.f);
-		configParam(LONGITUDE_PARAM, 0.f, 1023.f, 0.f, "Longitude", "", 0.f, 1./1023.f);
+		configParam(LATITUDE_PARAM, 0.f, 1023.f, 0.f, "Latitude", "", 0.f, 1. / 1023.f);
+		configParam(ALTITUDE_PARAM, 0.f, 1023.f, 0.f, "Altitude", "", 0.f, 1. / 1023.f);
+		configParam(LONGITUDE_PARAM, 0.f, 1023.f, 0.f, "Longitude", "", 0.f, 1. / 1023.f);
 	}
 
 	void process(const ProcessArgs& args) override {
@@ -126,11 +126,11 @@ struct Kompas : Module {
 			lights[mode].setSmoothBrightness(stepValue[mode] * clockTrigger.isHigh(), args.sampleTime);
 
 			// also indicate if the pattern has recently changed
-			lights[LAT_CHANGED_LED + mode].setSmoothBrightness(coordinateTrigger[mode].process(args.sampleTime), args.sampleTime);
+			lights[LAT_CHANGED_LIGHT + mode].setSmoothBrightness(coordinateTrigger[mode].process(args.sampleTime), args.sampleTime);
 		}
 
-		lights[CLOCK_LED].setBrightness(rescale(inputs[CLOCK_INPUT].getVoltage(), 0.1f, 2.f, 0.f, 1.f));
-		lights[RESET_LED].setSmoothBrightness(resetLEDPulse.process(args.sampleTime), args.sampleTime);
+		lights[CLOCK_LIGHT].setBrightness(rescale(inputs[CLOCK_INPUT].getVoltage(), 0.1f, 2.f, 0.f, 1.f));
+		lights[RESET_LIGHT].setSmoothBrightness(resetLEDPulse.process(args.sampleTime), args.sampleTime);
 
 		processLongitude();
 		processLatitude();
@@ -312,31 +312,29 @@ struct KompasWidget : ModuleWidget {
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, 0)));
 		addChild(createWidget<ScrewSilver>(Vec(RACK_GRID_WIDTH, RACK_GRID_HEIGHT - RACK_GRID_WIDTH)));
 
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(12.908, 13.607)), module, Kompas::LATITUDE_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(12.908, 34.774)), module, Kompas::ALTITUDE_PARAM));
-		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(12.908, 54.996)), module, Kompas::LONGITUDE_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(12.607, 16.749)), module, Kompas::LATITUDE_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(12.613, 36.429)), module, Kompas::ALTITUDE_PARAM));
+		addParam(createParamCentered<RoundBlackKnob>(mm2px(Vec(12.604, 56.102)), module, Kompas::LONGITUDE_PARAM));
 
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.049, 87.892)), module, Kompas::CV_LAT_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.049, 99.567)), module, Kompas::CV_ALT_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.049, 111.243)), module, Kompas::CV_LON_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(7.049, 76.216)), module, Kompas::RESET_INPUT));
-		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(18.944, 76.216)), module, Kompas::CLOCK_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.899, 75.961)), module, Kompas::RESET_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(18.328, 75.961)), module, Kompas::CLOCK_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.899, 87.372)), module, Kompas::CV_LAT_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.899, 98.8)), module, Kompas::CV_ALT_INPUT));
+		addInput(createInputCentered<PJ301MPort>(mm2px(Vec(6.899, 110.229)), module, Kompas::CV_LON_INPUT));
 
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(18.944, 87.842)), module, Kompas::LAT_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(18.944, 99.467)), module, Kompas::ALT_OUTPUT));
-		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(18.944, 111.093)), module, Kompas::LON_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(18.328, 87.372)), module, Kompas::LAT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(18.328, 98.8)), module, Kompas::ALT_OUTPUT));
+		addOutput(createOutputCentered<PJ301MPort>(mm2px(Vec(18.328, 110.229)), module, Kompas::LON_OUTPUT));
 
-		// pattern out LEDs
-		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(20.318, 12.495)), module, Kompas::LAT_LED));
-		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(20.318, 32.273)), module, Kompas::ALT_LED));
-		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(20.318, 52.385)), module, Kompas::LON_LED));
-		// has pattern updated LED
-		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(5.546, 19.559)), module, Kompas::LAT_CHANGED_LED));
-		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(5.546, 39.556)), module, Kompas::ALT_CHANGED_LED));
-		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(5.546, 59.467)), module, Kompas::LON_CHANGED_LED));
+		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(19.933, 13.266)), module, Kompas::LAT_LIGHT));
+		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(19.933, 32.949)), module, Kompas::ALT_LIGHT));
+		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(19.933, 52.613)), module, Kompas::LON_LIGHT));
+		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(5.33, 20.25)), module, Kompas::LAT_CHANGED_LIGHT));
+		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(5.344, 39.933)), module, Kompas::ALT_CHANGED_LIGHT));
+		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(5.344, 59.597)), module, Kompas::LON_CHANGED_LIGHT));
+		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(5.326, 67.552)), module, Kompas::RESET_LIGHT));
+		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(19.933, 67.552)), module, Kompas::CLOCK_LIGHT));
 
-		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(5.546, 67.486)), module, Kompas::RESET_LED));
-		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(20.318, 67.486)), module, Kompas::CLOCK_LED));
 	}
 };
 
