@@ -41,11 +41,19 @@ struct Kompas : Module {
 		NUM_MODES
 	};
 
+	enum Firmware {
+		DEFAULT,
+		PER_CHANNEL_RESETS
+	};
+	Firmware firmware = DEFAULT;
+
+
 	bool generate[NUM_MODES] = {true, true, true};
 
 	// for processing rising edges (clock / reset)
 	dsp::SchmittTrigger clockTrigger;
 	dsp::SchmittTrigger resetTrigger;
+	dsp::SchmittTrigger channelResetTrigger[NUM_MODES];
 
 	dsp::PulseGenerator coordinateTrigger[NUM_MODES];
 	dsp::PulseGenerator resetLEDPulse;
@@ -75,7 +83,7 @@ struct Kompas : Module {
 
 		for (int mode = 0; mode < NUM_MODES; ++mode) {
 			if (generate[mode]) {
-				DEBUG((string::f("regenerating for mode: %d", mode)).c_str());
+				
 				// regenerate the random array
 				for (int i = 0; i < length[mode]; i++) {
 					randomArray[mode][i] = random::u32() % 1011;
@@ -93,30 +101,33 @@ struct Kompas : Module {
 			}
 			resetLEDPulse.trigger(0.01f);
 		}
+		// if enabled in the context menu, CV ins can instead act as per-channel resets
+		if (firmware == PER_CHANNEL_RESETS) {
+			for (int mode = 0; mode < NUM_MODES; ++mode) {
+				if (resetTrigger.process(rescale(inputs[CV_LAT_INPUT + mode].getVoltage(), 0.1f, 2.f, 0.f, 1.f))) {
+					step[mode] = length[mode] - 1;
+				}
+			}
+		}
 
+		// TODO: grace period after reset
 		const bool clockTick = clockTrigger.process(rescale(inputs[CLOCK_INPUT].getVoltage(), 0.1f, 2.f, 0.f, 1.f));
 
 		if (clockTick) {
 
 			for (int mode = 0; mode < NUM_MODES; ++mode) {
 				step[mode] = (step[mode] + 1) % length[mode];
-			}
-
-			for (int mode = 0; mode < NUM_MODES; ++mode) {
 				pos[mode] = step[mode];
 
 				const float modeCV = inputs[CV_LAT_INPUT + mode].getVoltage();
-				int rescaledCV = rescale(clamp(modeCV, 0.f, 10.f), 0.f, 10.f, 0.f, 1023.f);
+				// CV only contributes if we're not in the mode where CV is used to provide per-channel resets
+				const int rescaledCV = (firmware == DEFAULT) ? rescale(clamp(modeCV, 0.f, 5.f), 0.f, 10.f, 0.f, 1023.f) : 0;
 
 				stepValue[mode] = (rescaledCV > 1011) ? 1 : patternArray[mode][pos[mode]];
 				prob[mode] = params[mode].getValue() + rescaledCV;
-
-				DEBUG((string::f("mode %d: %d %d %d %d", mode, pos[mode], step[mode], prob[mode], stepValue[mode], patternArray[mode][pos[mode]])).c_str());
 			}
 
 			noStepsLongitude = rescale(prob[LONGITUDE], 0, 1021, 1, 8);
-			DEBUG(string::f("noSteps: %d", noStepsLongitude).c_str());
-
 		}
 
 		for (int mode = 0; mode < NUM_MODES; ++mode) {
@@ -295,11 +306,26 @@ struct Kompas : Module {
 	}
 
 	void debugPattern(int mode) {
+#ifdef DEBUG_MODE
 		std::string output = string::f("regenerating new pattern for mode %d: ", mode);
 		for (int i = 0; i < length[mode]; i++) {
 			output += string::f("%d ", patternArray[mode][i]);
 		}
 		DEBUG(output.c_str());
+#endif
+	}
+
+	json_t* dataToJson() override {
+		json_t* rootJ = json_object();
+		json_object_set_new(rootJ, "firmwareMode", json_integer(firmware));
+		return rootJ;
+	}
+
+	void dataFromJson(json_t* rootJ) override {
+		json_t* rangeJ = json_object_get(rootJ, "firmwareMode");
+		if (rangeJ) {
+			firmware = (Firmware) json_integer_value(rangeJ);
+		}
 	}
 };
 
@@ -335,6 +361,37 @@ struct KompasWidget : ModuleWidget {
 		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(5.326, 67.552)), module, Kompas::RESET_LIGHT));
 		addChild(createLightCentered<SmallLight<YellowLight>>(mm2px(Vec(19.933, 67.552)), module, Kompas::CLOCK_LIGHT));
 
+	}
+
+	struct DefaultModeItem : MenuItem {
+		Kompas* module;
+		void onAction(const event::Action& e) override {
+			module->firmware = Kompas::DEFAULT;
+		}
+	};
+
+	struct PerChannelResetItem : MenuItem {
+		Kompas* module;
+		void onAction(const event::Action& e) override {
+			module->firmware = Kompas::PER_CHANNEL_RESETS;
+		}
+	};
+
+	void appendContextMenu(Menu* menu) override {
+		Kompas* module = dynamic_cast<Kompas*>(this->module);
+		assert(module);
+
+		menu->addChild(new MenuSeparator());
+
+		DefaultModeItem* defaultModeItem =
+		  createMenuItem<DefaultModeItem>("Per-channel CV control", CHECKMARK(module->firmware == Kompas::DEFAULT));
+		defaultModeItem->module = module;
+		menu->addChild(defaultModeItem);
+
+		PerChannelResetItem* perChannelResetItem =
+		  createMenuItem<PerChannelResetItem>("Per-channel reset", CHECKMARK(module->firmware == Kompas::PER_CHANNEL_RESETS));
+		perChannelResetItem->module = module;
+		menu->addChild(perChannelResetItem);
 	}
 };
 
