@@ -77,6 +77,25 @@ struct Kompas : Module {
 		configParam(LATITUDE_PARAM, 0.f, 1023.f, 0.f, "Latitude", "", 0.f, 1. / 1023.f);
 		configParam(ALTITUDE_PARAM, 0.f, 1023.f, 0.f, "Altitude", "", 0.f, 1. / 1023.f);
 		configParam(LONGITUDE_PARAM, 0.f, 1023.f, 0.f, "Longitude", "", 0.f, 1. / 1023.f);
+
+		configInput(CV_LAT_INPUT, "Latitude CV");
+		configInput(CV_ALT_INPUT, "Altitude CV");
+		configInput(CV_LON_INPUT, "Longitude CV");
+		configInput(RESET_INPUT, "Reset");
+		configInput(CLOCK_INPUT, "Clock");
+
+		configOutput(LAT_OUTPUT, "Latitude");
+		configOutput(ALT_OUTPUT, "Altitude");
+		configOutput(LON_OUTPUT, "Longitude");
+
+		configLight(LAT_LIGHT, "Latitude trigger");
+		configLight(ALT_LIGHT, "Altitude trigger");
+		configLight(LON_LIGHT, "Longitude trigger");
+		configLight(LAT_CHANGED_LIGHT, "Latitude changed");
+		configLight(ALT_CHANGED_LIGHT, "Altitude changed");
+		configLight(LON_CHANGED_LIGHT, "Longitude changed");
+		configLight(RESET_LIGHT, "Reset");
+		configLight(CLOCK_LIGHT, "Clock");
 	}
 
 	void process(const ProcessArgs& args) override {
@@ -104,7 +123,7 @@ struct Kompas : Module {
 		// if enabled in the context menu, CV ins can instead act as per-channel resets
 		if (firmware == PER_CHANNEL_RESETS) {
 			for (int mode = 0; mode < NUM_MODES; ++mode) {
-				if (resetTrigger.process(rescale(inputs[CV_LAT_INPUT + mode].getVoltage(), 0.1f, 2.f, 0.f, 1.f))) {
+				if (channelResetTrigger[mode].process(rescale(inputs[CV_LAT_INPUT + mode].getVoltage(), 0.1f, 2.f, 0.f, 1.f))) {
 					step[mode] = length[mode] - 1;
 				}
 			}
@@ -363,35 +382,13 @@ struct KompasWidget : ModuleWidget {
 
 	}
 
-	struct DefaultModeItem : MenuItem {
-		Kompas* module;
-		void onAction(const event::Action& e) override {
-			module->firmware = Kompas::DEFAULT;
-		}
-	};
-
-	struct PerChannelResetItem : MenuItem {
-		Kompas* module;
-		void onAction(const event::Action& e) override {
-			module->firmware = Kompas::PER_CHANNEL_RESETS;
-		}
-	};
-
 	void appendContextMenu(Menu* menu) override {
 		Kompas* module = dynamic_cast<Kompas*>(this->module);
 		assert(module);
 
 		menu->addChild(new MenuSeparator());
 
-		DefaultModeItem* defaultModeItem =
-		  createMenuItem<DefaultModeItem>("Per-channel CV control", CHECKMARK(module->firmware == Kompas::DEFAULT));
-		defaultModeItem->module = module;
-		menu->addChild(defaultModeItem);
-
-		PerChannelResetItem* perChannelResetItem =
-		  createMenuItem<PerChannelResetItem>("Per-channel reset", CHECKMARK(module->firmware == Kompas::PER_CHANNEL_RESETS));
-		perChannelResetItem->module = module;
-		menu->addChild(perChannelResetItem);
+		menu->addChild(createIndexPtrSubmenuItem("Mode", {"Per-channel CV control", "Per-channel reset"}, &module->firmware));
 	}
 };
 
