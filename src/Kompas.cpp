@@ -140,7 +140,7 @@ struct Kompas : Module {
 
 				const float modeCV = inputs[CV_LAT_INPUT + mode].getVoltage();
 				// CV only contributes if we're not in the mode where CV is used to provide per-channel resets
-				const int rescaledCV = (firmware == DEFAULT) ? rescale(clamp(modeCV, 0.f, 5.f), 0.f, 10.f, 0.f, 1023.f) : 0;
+				const int rescaledCV = (firmware == DEFAULT) ? rescale(clamp(modeCV, 0.f, 10.f), 0.f, 10.f, 0.f, 1023.f) : 0;
 
 				stepValue[mode] = (rescaledCV > 1011) ? 1 : patternArray[mode][pos[mode]];
 				prob[mode] = params[mode].getValue() + rescaledCV;

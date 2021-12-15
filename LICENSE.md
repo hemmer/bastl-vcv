@@ -3,4 +3,4 @@ Port of Bastl Eurorack modules. All **source code** in `src/` is copyright (C) 2
 Panel graphics in the `res` directory are copyright (C) 2018-2021 Bastl [CC-BY-SA V4](https://creativecommons.org/licenses/by-sa/4.0/).
 
 Original Source (CC-BY-SA V4):
-https://github.com/stziopa/kompas/blob/master/LICENSE.md/license.md
+https://github.com/bastl-instruments/kompas/blob/master/LICENSE.md/license.md
